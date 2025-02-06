@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  esign-client-db:
+    image: registry-bsre.bssn.go.id/esign-client-db:latest
+    container_name: esign-client-db
+    restart: always
+    volumes:
+      # apabila ingin menggunakan direktori default untuk persistent volume Docker (/var/lib/docker/volume/)
+      # - mariadb_data:/var/lib/mysql/
+      # apabila ingin menggunakan direktori non default untuk persistent volume Docker (biasanya direktori dengan ukuran besar yang telah disediakan oleh admin)
+      - /home/mariadb-data:/var/lib/mysql
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "10"
+            max-size: "100m"
+  
+  esign-client:
+    image: registry-bsre.bssn.go.id/esign-client-v2:latest
+    container_name: esign-client
+    restart: always
+    depends_on:
+      - esign-client-db
+    volumes:
+      # apabila ingin menggunakan direktori default untuk persistent volume Docker (/var/lib/docker/volume/)
+      # - esign_client_data:/home/esigncs-data
+      # apabila ingin menggunakan direktori non default untuk persistent volume Docker (biasanya direktori dengan ukuran besar yang telah disediakan oleh admin)
+      - /home/esigncs-data:/home/esigncs-data
+    environment:
+      - ESIGN_URL=https://api-bsre.bssn.go.id/v2
+      - ESIGN_ROOT_PATH=/home/esigncs-data
+      # masukkan ESIGN_CLIENT_ID, ESIGN_CLIENT_SECRET, ESIGN_INSTANSI, ESIGN_INSTANSI_OID tanpa tanda {}, setelah tanda = tidak perlu diberikan spasi
+      - ESIGN_CLIENT_ID=5_aJ6joE6eLbHLTGPIM0nG8CHCQa
+      - ESIGN_CLIENT_SECRET=tFTwlf6wUdHZr1oad4LMW3E8cVUa
+      - ESIGN_INSTANSI=Balai Besar Sertifikasi Elektronik
+      - ESIGN_INSTANSI_OID=2.16.360.1.2.1.70.51.1
+      # set proxy apabila diperlukan di infrastruktur instansi tujuan, false untuk menonaktifkan, true untuk mengaktifkan
+      - PROXY_ENABLED=false
+      - PROXY_HOST=
+      - PROXY_PORT=
+      - DB_HOST=esign-client-db
+      - DB_PORT=3306
+      - DB_NAME=esign_client
+      - DB_USER=esign
+      - DB_PASSWORD=bsremantap.!
+      - PROFILE_LOG=info 
+      - MANAGEMENT_FILE=storage
+      - JAVA_OPTS=-Djava.security.egd=file:/dev/./urandom -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/home -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+      - TZ=Asia/Jakarta
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "10"
+            max-size: "100m"
+  
+  esign-client-proxy:
+    image: registry-bsre.bssn.go.id/esign-client-proxy:latest
+    container_name: esign-client-proxy
+    restart: always
+    depends_on:
+      - esign-client
+    ports:
+      - 80:80
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "10"
+            max-size: "100m"
+
+# apabila ingin menggunakan direktori default untuk persistent volume Docker (/var/lib/docker/volume/), biarkan tetap non aktif apabila menggunakan direktori non default untuk persistent volume Docker
+# volumes:
+#   mariadb_data:
+#   esign_client_data:
